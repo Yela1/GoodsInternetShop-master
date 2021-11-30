@@ -1,0 +1,98 @@
+-- SQLINES DEMO *** racleDB bash -c "source /home/oracle/.bashrc; sqlplus /nolog"
+-- SQLINES DEMO *** sdba          -- password: Oradoc_db1
+-- SQLINES DEMO ***  "_ORACLE_SCRIPT"=true;
+-- SQLINES DEMO *** netshop identified by password;
+-- SQLINES DEMO *** GES to internetshop;
+
+DROP SEQUENCE AUTO_SEQ;
+DROP TABLE authorities;
+DROP TABLE order_details;
+DROP TABLE orders;
+DROP TABLE photo_goods;
+DROP TABLE goods;
+DROP TABLE goods_categories;
+DROP TABLE users;
+
+CREATE SEQUENCE auto_seq
+    START WITH 100000
+    INCREMENT BY   1
+    /* Warning: NOCACHE */
+    NO CYCLE;
+
+-- SQLINES LICENSE FOR EVALUATION USE ONLY
+create table users
+(
+    ID              DECIMAL(20) DEFAULT auto_seq.NEXTVAL,
+    USERNAME        VARCHAR(50)   NOT NULL UNIQUE,
+    PASSWORD        VARCHAR(1024),
+    GENDER          VARCHAR(50),
+    LOCALE          VARCHAR(50),
+    ADDRESS         VARCHAR(256),
+    FULL_NAME       VARCHAR(256),
+    ENABLED         SMALLINT DEFAULT 1 NOT NULL check (ENABLED in (0, 1)),
+    AUTH_PROVIDER   VARCHAR(256),
+    PROVIDER_ID     VARCHAR(256),
+    PICTURE         VARCHAR(512),
+    CONSTRAINT users_pk PRIMARY KEY (ID)
+);
+
+-- SQLINES LICENSE FOR EVALUATION USE ONLY
+create table goods_categories
+(
+    ID   DECIMAL(20) DEFAULT auto_seq.NEXTVAL,
+    NAME VARCHAR(50) NOT NULL UNIQUE,
+    CONSTRAINT categories_pk PRIMARY KEY (ID)
+);
+
+
+-- SQLINES LICENSE FOR EVALUATION USE ONLY
+create table goods
+(
+    ID          DECIMAL(20) DEFAULT auto_seq.NEXTVAL,
+    CATEGORY_ID DECIMAL(20) NOT NULL,
+    NAME        VARCHAR(128)  NOT NULL,
+    DESCRIPTION VARCHAR(1024) NOT NULL,
+    COST        DECIMAL(10, 2)  NOT NULL,
+    COUNT       INT      NOT NULL,
+    CONSTRAINT goods_pk PRIMARY KEY (ID),
+    FOREIGN KEY (CATEGORY_ID) REFERENCES goods_categories (ID) ON DELETE CASCADE
+);
+
+-- SQLINES LICENSE FOR EVALUATION USE ONLY
+create table photo_goods
+(
+    GOODS_ID    DECIMAL(20) NOT NULL,
+    PHOTO       TEXT,
+    FOREIGN KEY (GOODS_ID) REFERENCES goods (ID) ON DELETE CASCADE
+);
+
+-- SQLINES LICENSE FOR EVALUATION USE ONLY
+create table orders
+(
+    ID          DECIMAL(20) DEFAULT auto_seq.NEXTVAL,
+    USER_ID     DECIMAL(20) NOT NULL,
+    CREATED     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    STATUS      SMALLINT  DEFAULT 0 NOT NULL check (STATUS in (0, 1)),
+    CONSTRAINT order_pk PRIMARY KEY (ID),
+    FOREIGN KEY (USER_ID) REFERENCES users (ID) ON DELETE CASCADE
+);
+
+-- SQLINES LICENSE FOR EVALUATION USE ONLY
+create table order_details
+(
+    ID          DECIMAL(20) DEFAULT auto_seq.NEXTVAL,
+    ORDER_ID    DECIMAL(20) NOT NULL,
+    GOODS_ID    DECIMAL(20) NOT NULL,
+    COUNT       INT,
+    COST        DECIMAL(10, 2)  NOT NULL,
+    FOREIGN KEY (ORDER_ID) REFERENCES orders (ID) ON DELETE CASCADE,
+    FOREIGN KEY (GOODS_ID) REFERENCES goods (ID) ON DELETE CASCADE
+);
+
+-- SQLINES LICENSE FOR EVALUATION USE ONLY
+create table authorities
+(
+    USER_ID     DECIMAL(20) NOT NULL,
+    AUTHORITY   VARCHAR(10) check (AUTHORITY in ('ROLE_USER', 'ROLE_ADMIN')),
+    FOREIGN KEY (USER_ID) REFERENCES users (ID) ON DELETE CASCADE
+)
