@@ -1,7 +1,7 @@
 package kz.epam.InternetShop.util
 
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
+import org.springframework.validation.BindingResult
+import org.springframework.validation.FieldError
 import spock.lang.Specification
 
 

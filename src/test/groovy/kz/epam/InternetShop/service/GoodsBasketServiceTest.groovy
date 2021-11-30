@@ -186,7 +186,7 @@ class GoodsBasketServiceTest extends Specification{
 
     def "updateCountOrderDetailsInBasket() should update if count > 0"(){
         given:
-            orderDetails.setOrder(Order.builder().id(1L).build());
+            orderDetails.setOrder(Order.builder().id(1L).build())
 
         when:
             goodsBasketService.updateCountOrderDetailsInBasket([orderDetails], user)
@@ -211,7 +211,7 @@ class GoodsBasketServiceTest extends Specification{
 
     def "removeFromBasket() should remove orderDetails"() {
         given:
-            orderDetails.setOrder(Order.builder().id(1L).build());
+            orderDetails.setOrder(Order.builder().id(1L).build())
 
         when:
             goodsBasketService.removeFromBasket(orderDetails, user)
