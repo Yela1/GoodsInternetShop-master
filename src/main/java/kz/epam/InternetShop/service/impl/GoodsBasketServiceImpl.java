@@ -60,7 +60,7 @@ public class GoodsBasketServiceImpl implements GoodsBasketService {
         if (orderDetailsList!=null && orderDetailsList.size()>0)
             checkAvailability(orderDetailsList).forEach(orderDetails -> {
                 if (!orderDetails.isAvailable()) {
-                    throw new NotAvailableGoodsException("Order contains unaccessible item.");
+                    throw new NotAvailableGoodsException("Order contains inaccessible item.");
                 }
         });
     }

@@ -1,5 +1,6 @@
 package kz.epam.InternetShop.payload;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import javax.validation.constraints.Email;

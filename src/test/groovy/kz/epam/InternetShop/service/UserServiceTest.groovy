@@ -26,12 +26,14 @@ class UserServiceTest extends Specification{
                 username("yelaman")
                 .id(1L)
                 .password("Password123")
+                .address("Astana")
                 .build()
 
         user1 = User.builder().
                 username("ayat")
                 .id(2L)
                 .password("Password123")
+                .address("Almaty")
                 .build()
     }
 
@@ -75,19 +77,15 @@ class UserServiceTest extends Specification{
 
     def "save() should save user to db"(){
         when:
-            def result = userService.save(user)
+            userService.save(user)
 
         then:
-            1 * passwordEncoder.encode("Password123") >> "passwordEncoded"
-            1 * userRepository.save(user) >> user
+            1 * passwordEncoder.encode({it == "Password123"}) >> "passwordEncoded"
+            1 * userRepository.save({ it.password == "passwordEncoded" }) >> user
 
-        and:
-            user.getUsername() == result.getUsername()
-            result.getPassword() == "passwordEncoded"
     }
 
     def "delete() should delete user"(){
-
         when:
             userService.delete(user)
 
@@ -97,45 +95,30 @@ class UserServiceTest extends Specification{
     }
 
     def "findByUsernameLike() should return list of users"(){
-        given:
-            def list = [user, user1]
-
         when:
-            def result = userService.findByUsernameLike( _ as String)
+             userService.findByUsernameLike( "aman")
 
         then:
-            1 * userRepository.findByUsernameLike( _ as String) >> list
+            1 * userRepository.findByUsernameLike( {it == "%aman%" }) >> [user]
 
-        and:
-            list == result
     }
 
     def "findByAddressLike() should return list of users"(){
-        given:
-            def list = [user, user1]
-
         when:
-            def result = userService.findByAddressLike( _ as String)
+           userService.findByAddressLike( "stan")
 
         then:
-            1 * userRepository.findByAddressLike( _ as String) >> list
+            1 * userRepository.findByAddressLike({it == "%stan%"}) >> [user]
 
-        and:
-            list == result
     }
 
     def "findByFullNameLike() should return list of users"(){
-        given:
-            def list = [user, user1]
-
         when:
-            def result = userService.findByFullNameLike( _ as String)
+           userService.findByFullNameLike("aman")
 
         then:
-            1 * userRepository.findByFullNameLike( _ as String) >> list
+            1 * userRepository.findByFullNameLike({it == "%aman%"}) >> [user]
 
-        and:
-            list == result
     }
 
     def "findAll() should return all users"(){
@@ -153,20 +136,26 @@ class UserServiceTest extends Specification{
     }
 
     def "deleteByUsername() should delete user"(){
+        given:
+            def username = "yelaman"
+
         when:
-            userService.deleteByUsername( _ as String)
+            userService.deleteByUsername(username)
 
         then:
-            1 * userRepository.deleteByUsername( _ as String)
+            1 * userRepository.deleteByUsername( {it == username})
 
     }
 
     def "findByUsername() should return user"(){
+        given:
+            def username = "yelaman"
+
         when:
-            def result = userService.findByUsername("yelaman")
+            def result = userService.findByUsername(username)
 
         then:
-            1 * userRepository.findByUsername( "yelaman") >> Optional.of(user)
+            1 * userRepository.findByUsername( {it == username}) >> Optional.of(user)
 
         and:
             Optional.of(user) == result

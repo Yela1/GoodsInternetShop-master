@@ -12,6 +12,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import spock.lang.Specification
 
+import static kz.epam.InternetShop.util.TOUtil.*
 import java.util.stream.Collectors
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
@@ -67,6 +68,20 @@ class GoodsControllerTest extends Specification{
 
     }
 
+    def "findAll() should return 400 if request is not valid"(){
+        given:
+            def goodsFiltersTo = "InvalidRequest"
+            def request = new ObjectMapper().writeValueAsString(goodsFiltersTo)
+
+        expect:
+            mockMvc.perform(get("/goods")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(request))
+                    .andExpect(status().isBadRequest())
+
+
+    }
+
     def "findAllByGoodsCategory() should return goods with specific category"(){
         given:
             def goods = Goods.builder().id(1L).name("goods").build()
@@ -80,7 +95,7 @@ class GoodsControllerTest extends Specification{
                     .andExpect(content().json(expected))
 
         then:
-            1 * goodsService.findAllByGoodsCategory(_, _) >> [goods]
+            1 * goodsService.findAllByGoodsCategory({ it.id == 1L} , {it instanceof Collection}) >> [goods]
     }
 
     def "findAllByGoodsCategory() should return goods with specific category and with filter"() {
@@ -100,14 +115,26 @@ class GoodsControllerTest extends Specification{
                     .andExpect(content().json(expected))
 
         then:
-            1 * goodsService.findAllByGoodsCategory(_, _) >> [goods]
+            1 * goodsService.findAllByGoodsCategory({it.id == 1L}, asList(goodsFiltersTo)) >> [goods]
+
+    }
+    def "findAllByGoodsCategory() should return 400 if request is not valid"() {
+        given:
+            def goodsFiltersTo = "InvalidRequest"
+            def request = new ObjectMapper().writeValueAsString(goodsFiltersTo)
+
+        expect:
+            mockMvc.perform(post("/goods/categories/{categoryId}/filter", 1L)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(request))
+                    .andExpect(status().isBadRequest())
 
     }
 
     def "get() should return goods with id"(){
         given:
             def goods = Goods.builder().id(1L).name("goods").build()
-            def expected = new ObjectMapper().writeValueAsString(TOUtil.asTO(goods))
+            def expected = new ObjectMapper().writeValueAsString(asTO(goods))
 
         when:
             mockMvc.perform(get("/goods/{goodsId}", 1L))
@@ -131,7 +158,7 @@ class GoodsControllerTest extends Specification{
     def "update() should update goods"() {
         given:
             def goods = Goods.builder().id(1L).name("goods").build()
-            def goodsTo = TOUtil.asTO(goods)
+            def goodsTo = asTO(goods)
             def request = new ObjectMapper().writeValueAsString(goodsTo)
 
         when:
@@ -141,13 +168,23 @@ class GoodsControllerTest extends Specification{
                     .andExpect(status().isNoContent())
 
         then:
-            1 *  goodsService.save(_)
+            1 *  goodsService.save({it.id == 1L && it.name == goods.getName()})
+    }
+    def "update() should return 400 if request is not valid"() {
+        given:
+            def request = new ObjectMapper().writeValueAsString("InvalidRequest")
+
+        expect:
+            mockMvc.perform(put("/goods/{goodsIs}", 1L)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(request))
+                    .andExpect(status().isBadRequest())
     }
 
     def "create() should create room"(){
         given:
             def goods = Goods.builder().id(1L).name("goods").build()
-            def goodsTo = TOUtil.asTO(goods)
+            def goodsTo = asTO(goods)
             def request = new ObjectMapper().writeValueAsString(goodsTo)
             def expected = new ObjectMapper().writeValueAsString(goodsTo)
 
@@ -160,6 +197,16 @@ class GoodsControllerTest extends Specification{
                     .andExpect(content().json(expected))
 
         then:
-            1 * goodsService.save(_) >> goods
+            1 * goodsService.save({it.id == null && it.name == goods.getName()}) >> goods
+    }
+    def "create() should return 400 if request is not valid"(){
+        given:
+            def request = new ObjectMapper().writeValueAsString("InvalidRequest")
+
+        expect:
+             mockMvc.perform(post("/goods")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(request))
+                    .andExpect(status().isBadRequest())
     }
 }

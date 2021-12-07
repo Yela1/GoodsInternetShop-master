@@ -23,9 +23,10 @@ class GoodsBasketControllerTest extends Specification{
     GoodsBasketController goodsBasketController = new GoodsBasketController(goodsBasketService, userService)
     MockMvc mockMvc = standaloneSetup(goodsBasketController).build()
 
+
     def "getBasketGoods() should return list of OrderDetails"(){
         given:
-            def user = new User()
+            def user = User.builder().id(1L).build()
             def expected =  new OrderDetails(1L, 1 ,2, new Order(), new Goods(), true)
             def json = new ObjectMapper().writeValueAsString([expected])
 
@@ -37,12 +38,12 @@ class GoodsBasketControllerTest extends Specification{
 
         then:
             1 * userService.findById(_) >> user
-            1 * goodsBasketService.getAllOrderDetails(_) >> [expected]
+            1 * goodsBasketService.getAllOrderDetails({it.id == user.getId()}) >> [expected]
     }
 
     def "clearBasket() should clear the basket"(){
         given:
-            User user = new User()
+            def user = User.builder().id(1L).build()
 
         when:
             mockMvc.perform(get("/goods/basket/clear"))
@@ -50,41 +51,55 @@ class GoodsBasketControllerTest extends Specification{
 
         then:
             1 * userService.findById(_) >> user
-            1 * goodsBasketService.clear(user)
+            1 * goodsBasketService.clear({ it.id == user.getId() })
     }
 
     def "placeOrder() should change status of basket"() {
         given:
-            User user = new User()
+            def user = User.builder().id(1L).build()
 
         when:
             mockMvc.perform(get("/goods/basket/order")).andExpect(status().isAccepted())
 
         then:
             1 * userService.findById(_) >> user
-            1 * goodsBasketService.setStatusToOne(user)
+            1 * goodsBasketService.setStatusToOne({ it.id == user.getId() })
     }
 
     def "createOrderDetailsInBasket() should create new OrderDetails"() {
         given:
-            User user = new User()
+            def user = User.builder().id(1L).build()
             def orderDetailsTO = new OrderDetailsTO(1L, 1L, "goods_name",15,15,"photo",1L,true)
-            def json = new ObjectMapper().writeValueAsString(orderDetailsTO)
+            def requestJson = new ObjectMapper().writeValueAsString(orderDetailsTO)
 
         when:
             mockMvc.perform(post("/goods/toBasket")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(json))
+                    .content(requestJson))
                     .andExpect(status().isCreated())
 
         then:
             1 * userService.findById(_) >> user
-            1 * goodsBasketService.createOrderDetailsInBasket(_, user)
+            1 * goodsBasketService.createOrderDetailsInBasket({ it.id == orderDetailsTO.getId() && it.cost == orderDetailsTO.getCost()}, user)
+    }
+
+    def "createOrderDetailsInBasket() should return 400 if request not valid"() {
+        given:
+
+            def orderDetailsTO = null
+            def requestJson = new ObjectMapper().writeValueAsString(orderDetailsTO)
+
+        expect:
+            mockMvc.perform(post("/goods/toBasket")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestJson))
+                    .andExpect(status().isBadRequest())
+
     }
 
     def "updateCountOrderDetailsInBasket() should update basket"(){
         given:
-            def user = new User()
+            def user = User.builder().id(1L).build()
             def orderDetailsTO = new OrderDetailsTO(1L, 1L, "goods_name",15,15,"photo",1L,true)
             def json = new ObjectMapper().writeValueAsString([orderDetailsTO])
 
@@ -96,19 +111,33 @@ class GoodsBasketControllerTest extends Specification{
 
         then:
             1 * userService.findById(_) >> user
-            1 * goodsBasketService.updateCountOrderDetailsInBasket(_, user)
+            1 * goodsBasketService.updateCountOrderDetailsInBasket({it[0].cost == orderDetailsTO.getCost()}, user)
      }
+
+    def "updateCountOrderDetailsInBasket() should return 400 if request not valid"(){
+        given:
+            def orderDetailsTO = "invalidRequest"
+            def json = new ObjectMapper().writeValueAsString([orderDetailsTO])
+
+        expect:
+            mockMvc.perform(put("/goods/basket")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json))
+                    .andExpect(status().isBadRequest())
+
+    }
 
     def "removeFromBasket() should delete orderDetails from basket"(){
         given:
-            def user = new User()
+            def id = 1L
+            def user = User.builder().id(1L).build()
 
         when:
-            mockMvc.perform(delete("/goods/basket/{id}", 1L)).andExpect(status().isOk())
+            mockMvc.perform(delete("/goods/basket/{id}", id)).andExpect(status().isOk())
 
         then:
             1 * userService.findById(_) >> user
-            1 * goodsBasketService.removeFromBasket(_, user)
+            1 * goodsBasketService.removeFromBasket({id == 1L}, user)
     }
 
 

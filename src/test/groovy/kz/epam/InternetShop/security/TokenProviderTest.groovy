@@ -1,5 +1,6 @@
 package kz.epam.InternetShop.security
 
+import io.jsonwebtoken.Jwts
 import kz.epam.InternetShop.configuration.AppProperties
 import kz.epam.InternetShop.model.Role
 import kz.epam.InternetShop.model.User
@@ -19,47 +20,57 @@ class TokenProviderTest extends Specification{
     AppProperties.Auth auth = new AppProperties.Auth()
 
     def setup(){
-        auth.setTokenExpirationMsec(600000L)
+        auth.setTokenExpirationMsec(31556952000L)
         auth.setTokenSecret("secret")
     }
 
     def "createToken() from authentication should return token"(){
         given:
-            UserPrincipal userPrincipal = new UserPrincipal(1L, "username", "password", "fullName","address",1, Collections.singleton(Role.ROLE_USER))
+            def expectedId = 15L
+            def userPrincipal = new UserPrincipal(15L, "username", "password", "fullName","address",1, Collections.singleton(Role.ROLE_USER))
             Authentication authentication = Mock(){
                 getPrincipal() >> userPrincipal
             }
 
         when:
-            tokenProvider.createToken(authentication)
+            def result = tokenProvider.createToken(authentication)
 
         then:
             2 * appProperties.getAuth() >> auth
+
+        and:
+            result
+            expectedId == Long.parseLong(Jwts.parser()
+                    .setSigningKey(auth.getTokenSecret())
+                    .parseClaimsJws(result).getBody().getSubject())
 
     }
 
     def "createToken() from user should return token"(){
         given:
-            User user = User.builder().id(1L).build()
+            def user = User.builder().id(1L).build()
+            def expectedId = 1L
 
         when:
-            tokenProvider.createToken(user)
+            def result =tokenProvider.createToken(user)
 
         then:
             2 * appProperties.getAuth() >> auth
+
+        and:
+            result
+            expectedId == Long.parseLong(Jwts.parser()
+                    .setSigningKey(auth.getTokenSecret())
+                    .parseClaimsJws(result).getBody().getSubject())
+
 
     }
 
     def "getUserIdFromToken() should return id from token"(){
         given:
-            User user = User.builder().id(1L).build()
+            def token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxNSIsImlhdCI6MTYzODg5MDczNywiZXhwIjoxNjcwNDQ3Njg5fQ.GoUfmZv6Wxl2TJDWNnmF6ZB72wMOrm7kl1kuL8E7mFV_9QFCCQy3FkrIUdkyuh41cRZtDUPQ-7bjY1-LxXejMQ"
+            def user = User.builder().id(15L).build()
             def expectedId = user.getId()
-
-        when:
-            def token = tokenProvider.createToken(user)
-
-        then:
-            2 * appProperties.getAuth() >> auth
 
         when:
             def result = tokenProvider.getUserIdFromToken(token)
@@ -75,24 +86,19 @@ class TokenProviderTest extends Specification{
 
     def "getAuthenticationByUserFromDbWithId() should return UsernamePasswordAuthenticationToken"(){
         given:
-            User user = User.builder().id(1L).authority(Collections.singleton(Role.ROLE_USER)).build()
+            def token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxNSIsImlhdCI6MTYzODg5MDczNywiZXhwIjoxNjcwNDQ3Njg5fQ.GoUfmZv6Wxl2TJDWNnmF6ZB72wMOrm7kl1kuL8E7mFV_9QFCCQy3FkrIUdkyuh41cRZtDUPQ-7bjY1-LxXejMQ"
+            def user = User.builder().id(15L).authority(Collections.singleton(Role.ROLE_USER)).build()
             UserDetails userDetails = Mock(){
                 getAuthorities() >> user.getAuthority()
             }
             def expected = new UsernamePasswordAuthenticationToken(userDetails, "", user.getAuthority())
 
         when:
-            def token = tokenProvider.createToken(user)
-
-        then:
-            2 * appProperties.getAuth() >> auth
-
-        when:
             def result = tokenProvider.getAuthenticationByUserFromDbWithId(token)
 
         then:
             1 * appProperties.getAuth() >> auth
-            1 * userDetailsService.loadUserById(_) >> userDetails
+            1 * userDetailsService.loadUserById({it == 15L}) >> userDetails
 
         and:
             expected == result

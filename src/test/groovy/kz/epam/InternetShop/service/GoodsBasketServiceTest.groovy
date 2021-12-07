@@ -12,6 +12,7 @@ import kz.epam.InternetShop.service.interfaces.GoodsBasketService
 import kz.epam.InternetShop.util.exception.NotAvailableGoodsException
 import kz.epam.InternetShop.util.exception.NotFoundException
 import spock.lang.Specification
+
 class GoodsBasketServiceTest extends Specification{
 
     OrderRepository orderRepository = Mock()
@@ -22,188 +23,233 @@ class GoodsBasketServiceTest extends Specification{
                                                     orderDetailsRepository,
                                                     goodsRepository)
 
-    User user
-    OrderDetails orderDetails
-    Order order
-    Goods goods
-
-    def setup(){
-        goods = Goods.builder()
-                .id(1L)
-                .count(5)
-                .build()
-
-        orderDetails = OrderDetails.builder()
-                .id(1L)
-                .available(true)
-                .goods(goods)
-                .count(5)
-                .build()
-
-        order = Order.builder()
-                .id(1L)
-                .orderDetails([orderDetails])
-                .status(0)
-                .build()
-
-        user = User.builder()
-                .orders([order,order])
-                .build()
-
-    }
 
     def "getAllOrderDetail() should return OrderDetails"(){
         given:
-            def orderDetailsList = [orderDetails]
-            def orderList = [order]
+            def orderDetails = createOrderDetails()
+            def order = createOrder()
+            def user = createUser()
+            def goods = createGoods()
 
         when:
             def result = goodsBasketService.getAllOrderDetails(user)
 
         then:
-            1 * orderRepository.findAllByUserAndStatus(user,0) >> orderList
-            1 * orderDetailsRepository.findByOrder(order) >> orderDetailsList
-            1 * goodsRepository.findById(1L) >> Optional.of(goods)
+            1 * orderRepository.findAllByUserAndStatus(user, { it == 0}) >> [order]
+            1 * orderDetailsRepository.findByOrder({ it.id == order.getId() && it.status == order.getStatus() }) >> [orderDetails]
+            1 * goodsRepository.findById({it == orderDetails.getId()}) >> Optional.of(goods)
 
         and:
-            orderDetailsList == result
+            [orderDetails] == result
+    }
+
+    def "getAllOrderDetail() should return OrderDetails when basket size == 0 "(){
+        given:
+            def orderDetails = createOrderDetails()
+            def user = createUser()
+            def goods = createGoods()
+
+        when:
+            def result = goodsBasketService.getAllOrderDetails(user)
+
+        then:
+            1 * orderRepository.findAllByUserAndStatus(user, { it == 0 }) >> []
+            1 * orderRepository.save({it.status == 0 && it.user == user})
+            1 * orderDetailsRepository.findByOrder({ it.id == null && it.status == 0 }) >> [orderDetails]
+            1 * goodsRepository.findById({it == orderDetails.getId()}) >> Optional.of(goods)
+
+        and:
+            [orderDetails] == result
     }
 
     def "clear() should delete OrderDetails"() {
         given:
-            def orderList = [order]
+            def order = createOrder()
+            def user = createUser()
+
 
         when:
             goodsBasketService.clear(user)
 
         then:
-            1 * orderRepository.findAllByUserAndStatus(user, 0) >> orderList
-            1 * orderRepository.delete(order)
+            1 * orderRepository.findAllByUserAndStatus(user, { it == 0 }) >> [order]
+            1 * orderRepository.delete({ it.id == order.getId() })
 
     }
+
+    def "clear() should delete OrderDetails when basket size == 0"(){
+        given:
+            def user = createUser()
+
+        when:
+            goodsBasketService.clear(user)
+
+        then:
+            1 * orderRepository.findAllByUserAndStatus(user, {it == 0}) >> []
+            1 * orderRepository.save({it.status == 0 && it.user == user})
+            1 * orderRepository.delete({it.id == null && it.status == 0})
+    }
+
 
     def "setStatusToOne() should set status of basket"(){
         given:
-            def orderList = [order]
+            def order = createOrder()
+            def user = createUser()
+            def goods = createGoods()
 
         when:
             goodsBasketService.setStatusToOne(user)
 
         then:
-            1 * orderRepository.findAllByUserAndStatus(user, 0) >> orderList
-            1 * goodsRepository.findById(1L) >> Optional.of(goods)
-            1 * orderRepository.save(order)
+            1 * orderRepository.findAllByUserAndStatus(user, {it == 0}) >>  [order]
+            1 * goodsRepository.findById({ it == order.getId() }) >> Optional.of(goods)
+            1 * orderRepository.save({ it.id == order.getId() && it.status == 1 })
 
-        and:
-            order.getStatus() == 1
 
     }
 
-    def "setStatusToOne() should throw NotAvailableGoodsException if orderDetails not available"(){
+    def "setStatusToOne() should set status of basket when basket size == 0"(){
         given:
-            orderDetails.setAvailable(false)
-            orderDetails.setCount(6)
-            def orderList = [order]
+            def user = createUser()
 
         when:
             goodsBasketService.setStatusToOne(user)
 
         then:
-            1 * orderRepository.findAllByUserAndStatus(user, 0 ) >> orderList
-            1 * goodsRepository.findById(1L) >> Optional.of(goods)
+            1 * orderRepository.findAllByUserAndStatus(user, {it == 0}) >>  []
+            1 * orderRepository.save({it.status == 0 && it.user == user })
+            1 * orderRepository.save({ it.id == null && it.status == 1 })
+
+
+    }
+
+
+
+
+    def "setStatusToOne() should throw NotAvailableGoodsException if orderDetails not available"(){
+        given:
+            def user = createUser()
+            def order = createOrder()
+            order.getOrderDetails()[0].setAvailable(false)
+            order.getOrderDetails()[0].setCount(6)
+            def msg = "Order contains inaccessible item."
+
+        when:
+            goodsBasketService.setStatusToOne(user)
+
+        then:
+            1 * orderRepository.findAllByUserAndStatus(user, { it == 0 } ) >> [order]
+            1 * goodsRepository.findById(1L) >> Optional.of(order.getOrderDetails()[0].getGoods())
 
         and:
-            thrown(NotAvailableGoodsException)
+            def result = thrown(NotAvailableGoodsException)
+            msg == result.getMessage()
 
     }
 
     def "getBasket() should return order if order size > 0"() {
         given:
-            def orderList = [order]
+            def order = createOrder()
+            def user = createUser()
 
         when:
             goodsBasketService.getBasket(user)
 
         then:
-            orderRepository.findAllByUserAndStatus(user,0) >> orderList
+            orderRepository.findAllByUserAndStatus(user,{it == 0}) >> [order]
     }
 
     def "getBasket() should save order if order size == 0"(){
         given:
-            def expectedStatus = 0
+            def user = createUser()
 
         when:
-            def result = goodsBasketService.getBasket(user)
+            goodsBasketService.getBasket(user)
 
         then:
-            1 * orderRepository.findAllByUserAndStatus(user, 0) >> []
-            1 * orderRepository.save(_) >> order
-
-        and:
-            expectedStatus == result.getStatus()
-
+            1 * orderRepository.findAllByUserAndStatus(user, {it == 0}) >> []
+            1 * orderRepository.save({ it.id == null && it.status == 0 })
 
     }
 
 
     def "createOrderDetailsInBasket() should save OrderDetails if exist" (){
-        when:
-            def result = goodsBasketService.createOrderDetailsInBasket(orderDetails, user)
+        given:
+            def user = createUser()
+            def order = createOrder()
+            def orderDetails = createOrderDetails()
 
-        then:
-            1 * orderRepository.findAllByUserAndStatus(user, 0) >> [order]
-            1 * orderDetailsRepository.findByOrderAndGoodsAndCost(_, orderDetails.getGoods(), orderDetails.getCost()) >> orderDetails
-            1 * orderDetailsRepository.save(_) >> orderDetails
 
-        and:
-            result.getCount() == 10
-
-    }
-
-    def "createOrderDetailsInBasket() should create new OrderDetails"() {
         when:
             goodsBasketService.createOrderDetailsInBasket(orderDetails, user)
 
         then:
-            1 * orderRepository.findAllByUserAndStatus(user, 0) >> [order]
-            1 * orderDetailsRepository.findByOrderAndGoodsAndCost(_, orderDetails.getGoods(), orderDetails.getCost()) >> null
-            1 * orderDetailsRepository.save(_)
+            1 * orderRepository.findAllByUserAndStatus(user, { it == 0 }) >> [order]
+            1 * orderDetailsRepository.findByOrderAndGoodsAndCost(order, {it == orderDetails.getGoods()}, {it == orderDetails.getCost() }) >> orderDetails
+            1 * orderDetailsRepository.save({it.count == 10}) >> orderDetails
+
+
+    }
+
+    def "createOrderDetailsInBasket() should create new OrderDetails"() {
+        given:
+            def user = createUser()
+            def order = createOrder()
+            def orderDetails = createOrderDetails()
+
+        when:
+            goodsBasketService.createOrderDetailsInBasket(orderDetails, user)
+
+        then:
+            1 * orderRepository.findAllByUserAndStatus(user, {it == 0}) >> [order]
+            1 * orderDetailsRepository.findByOrderAndGoodsAndCost(order, {it == orderDetails.getGoods()}, {it == orderDetails.getCost()}) >> null
+            1 * orderDetailsRepository.save({it.order == order})
 
     }
 
     def "updateCountOrderDetailsInBasket() delete orderDetails if count==0"(){
         given:
+            def user = createUser()
+            def orderDetails = createOrderDetails()
             orderDetails.setCount(0)
 
         when:
             goodsBasketService.updateCountOrderDetailsInBasket([orderDetails], user)
 
         then:
-            1 * orderDetailsRepository.findById(orderDetails.getId()) >> Optional.of(orderDetails)
+            1 * orderDetailsRepository.findById({it == orderDetails.getId()}) >> Optional.of(orderDetails)
             1 * orderDetailsRepository.delete(orderDetails)
 
     }
 
     def "updateCountOrderDetailsInBasket() should update if count > 0"(){
         given:
-            orderDetails.setOrder(Order.builder().id(1L).build())
+            def user = createUser()
+            def orderDetails = createOrderDetails()
+            def order = createOrder()
+            orderDetails.setOrder(order)
 
         when:
             goodsBasketService.updateCountOrderDetailsInBasket([orderDetails], user)
 
         then:
-            1 * orderRepository.findAllByUserAndStatus(user,0) >> [order]
-            1 * orderDetailsRepository.findById(orderDetails.getId()) >> Optional.of(orderDetails)
-            1 * orderDetailsRepository.updateCount(orderDetails.getId(), orderDetails.getCount())
+            1 * orderRepository.findAllByUserAndStatus(user,{it == 0}) >> [order]
+            1 * orderDetailsRepository.findById({it == orderDetails.getId()}) >> Optional.of(orderDetails)
+            1 * orderDetailsRepository.updateCount({it == orderDetails.getId()}, {it == orderDetails.getCount() } )
     }
 
     def "updateCountOrderDetailsInBasket() should throw NotFoundException"(){
+        given:
+            def user = createUser()
+            def orderDetails = createOrderDetails()
+            def order = createOrder()
+
         when:
             goodsBasketService.updateCountOrderDetailsInBasket([orderDetails], user)
 
         then:
-            1 * orderRepository.findAllByUserAndStatus(user,0) >> [order]
-            1 * orderDetailsRepository.findById(orderDetails.getId()) >> Optional.empty()
+            1 * orderRepository.findAllByUserAndStatus(user, { it == 0 }) >> [order]
+            1 * orderDetailsRepository.findById({it == orderDetails.getId()}) >> Optional.empty()
 
         and:
             thrown(NotFoundException)
@@ -211,28 +257,69 @@ class GoodsBasketServiceTest extends Specification{
 
     def "removeFromBasket() should remove orderDetails"() {
         given:
-            orderDetails.setOrder(Order.builder().id(1L).build())
-
+            def user = createUser()
+            def orderDetails = createOrderDetails()
+            def order = createOrder()
+            orderDetails.setOrder(order)
         when:
             goodsBasketService.removeFromBasket(orderDetails, user)
 
         then:
-            1 * orderRepository.findAllByUserAndStatus(user, 0) >> [order]
-            1 * orderDetailsRepository.findById(orderDetails.getId()) >> Optional.of(orderDetails)
-            1 * orderDetailsRepository.delete(orderDetails)
+            1 * orderRepository.findAllByUserAndStatus(user, { it == 0 }) >> [order]
+            1 * orderDetailsRepository.findById({it == orderDetails.getId()}) >> Optional.of(orderDetails)
+            1 * orderDetailsRepository.delete({ it == orderDetails })
 
     }
 
     def "removeFromBasket() should throw NotFoundException"() {
+        given:
+            def user = createUser()
+            def orderDetails = createOrderDetails()
+            def order = createOrder()
+
         when:
             goodsBasketService.removeFromBasket(orderDetails, user)
 
         then:
-            1 * orderRepository.findAllByUserAndStatus(user,0) >> [order]
-            1 * orderDetailsRepository.findById(orderDetails.getId()) >> Optional.empty()
+            1 * orderRepository.findAllByUserAndStatus(user, { it == 0 }) >> [order]
+            1 * orderDetailsRepository.findById({it == orderDetails.getId()}) >> Optional.empty()
 
         and:
             thrown(NotFoundException)
 
+    }
+
+
+
+
+
+    static Goods createGoods(){
+        return Goods.builder()
+                .id(1L)
+                .count(5)
+                .build()
+    }
+
+    static OrderDetails createOrderDetails(){
+        return OrderDetails.builder()
+                .id(1L)
+                .available(true)
+                .goods(createGoods())
+                .count(5)
+                .build()
+    }
+
+    static Order createOrder(){
+        Order.builder()
+                .id(1L)
+                .orderDetails([createOrderDetails()])
+                .status(0)
+                .build()
+    }
+
+    static User createUser(){
+        return User.builder()
+                .orders([createOrder(),createOrder()])
+                .build()
     }
 }

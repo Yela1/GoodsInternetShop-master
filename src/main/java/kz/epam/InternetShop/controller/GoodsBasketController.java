@@ -81,8 +81,7 @@ public class GoodsBasketController {
     @ApiOperation(value = "Update count order details in basket", response = ResponseEntity.class, httpMethod = "PUT")
     public ResponseEntity<String> updateCountOrderDetailsInBasket(
             @Valid @RequestBody List<OrderDetailsTO> orderDetailsTOList,
-            @CurrentUser UserPrincipal userPrincipal
-    ) {
+            @CurrentUser UserPrincipal userPrincipal) {
         User user = userService.findById(userPrincipal.getId());
         basketService.updateCountOrderDetailsInBasket(createListFrom(orderDetailsTOList), user);
         return new ResponseEntity(HttpStatus.OK);
