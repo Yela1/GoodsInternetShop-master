@@ -1,8 +1,6 @@
 package kz.epam.InternetShop.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import kz.epam.InternetShop.model.Goods
-import kz.epam.InternetShop.model.GoodsCategory
 import kz.epam.InternetShop.model.TO.GoodsCategoryTO
 import kz.epam.InternetShop.model.TO.GoodsFiltersTO
 import kz.epam.InternetShop.service.interfaces.GoodsCategoryService
@@ -19,8 +17,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup
-
-
+import static kz.epam.InternetShop.ObjectCreator.*
 
 class GoodsControllerTest extends Specification{
     GoodsCategoryService goodsCategoryService = Mock()
@@ -30,10 +27,7 @@ class GoodsControllerTest extends Specification{
 
     def "getCategories() should return all categories"() {
         given:
-            def goodsCategory = GoodsCategory.builder()
-                    .id(15L)
-                    .name("new")
-                    .build()
+            def goodsCategory = createGoodsCategory(1L, "CARS")
             def goodsCategoryTO = new GoodsCategoryTO(goodsCategory.getId(),goodsCategory.getName())
             def expected = new ObjectMapper().writeValueAsString([goodsCategoryTO])
 
@@ -49,8 +43,8 @@ class GoodsControllerTest extends Specification{
 
     def "findAll() should return all goods"(){
         given:
-            def goodsFiltersTo = new GoodsFiltersTO()
-            def goods = Goods.builder().id(1L).name("goods").build()
+            def goodsFiltersTo = createGoodsFilter(false, "goods")
+            def goods = createGoods(5L,"goods")
             def goodsToList = [goods].stream().map(TOUtil.&asTO).collect(Collectors.toList())
             def expected = new ObjectMapper().writeValueAsString(goodsToList)
             def request = new ObjectMapper().writeValueAsString(goodsFiltersTo)
@@ -84,7 +78,7 @@ class GoodsControllerTest extends Specification{
 
     def "findAllByGoodsCategory() should return goods with specific category"(){
         given:
-            def goods = Goods.builder().id(1L).name("goods").build()
+            def goods = createGoods(6L,"goods")
             def goodsToList = [goods].stream().map(TOUtil.&asTO).collect(Collectors.toList())
             def expected = new ObjectMapper().writeValueAsString(goodsToList)
 
@@ -101,7 +95,7 @@ class GoodsControllerTest extends Specification{
     def "findAllByGoodsCategory() should return goods with specific category and with filter"() {
         given:
             def goodsFiltersTo = new GoodsFiltersTO()
-            def goods = Goods.builder().id(1L).name("goods").build()
+            def goods = createGoods(6L,"goods")
             def goodsToList = [goods].stream().map(TOUtil.&asTO).collect(Collectors.toList())
             def expected = new ObjectMapper().writeValueAsString(goodsToList)
             def request = new ObjectMapper().writeValueAsString(goodsFiltersTo)
@@ -133,7 +127,7 @@ class GoodsControllerTest extends Specification{
 
     def "get() should return goods with id"(){
         given:
-            def goods = Goods.builder().id(1L).name("goods").build()
+            def goods = createGoods(6L,"goods")
             def expected = new ObjectMapper().writeValueAsString(asTO(goods))
 
         when:
@@ -157,7 +151,7 @@ class GoodsControllerTest extends Specification{
 
     def "update() should update goods"() {
         given:
-            def goods = Goods.builder().id(1L).name("goods").build()
+            def goods = createGoods(6L,"goods")
             def goodsTo = asTO(goods)
             def request = new ObjectMapper().writeValueAsString(goodsTo)
 
@@ -183,7 +177,7 @@ class GoodsControllerTest extends Specification{
 
     def "create() should create room"(){
         given:
-            def goods = Goods.builder().id(1L).name("goods").build()
+            def goods = createGoods(6L,"goods")
             def goodsTo = asTO(goods)
             def request = new ObjectMapper().writeValueAsString(goodsTo)
             def expected = new ObjectMapper().writeValueAsString(goodsTo)
@@ -199,6 +193,7 @@ class GoodsControllerTest extends Specification{
         then:
             1 * goodsService.save({it.id == null && it.name == goods.getName()}) >> goods
     }
+
     def "create() should return 400 if request is not valid"(){
         given:
             def request = new ObjectMapper().writeValueAsString("InvalidRequest")

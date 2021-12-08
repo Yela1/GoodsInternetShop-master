@@ -1,9 +1,5 @@
 package kz.epam.InternetShop.service
 
-import kz.epam.InternetShop.model.Goods
-import kz.epam.InternetShop.model.Order
-import kz.epam.InternetShop.model.OrderDetails
-import kz.epam.InternetShop.model.User
 import kz.epam.InternetShop.repository.GoodsRepository
 import kz.epam.InternetShop.repository.OrderDetailsRepository
 import kz.epam.InternetShop.repository.OrderRepository
@@ -12,6 +8,9 @@ import kz.epam.InternetShop.service.interfaces.GoodsBasketService
 import kz.epam.InternetShop.util.exception.NotAvailableGoodsException
 import kz.epam.InternetShop.util.exception.NotFoundException
 import spock.lang.Specification
+
+
+import static kz.epam.InternetShop.ObjectCreator.*
 
 class GoodsBasketServiceTest extends Specification{
 
@@ -129,9 +128,7 @@ class GoodsBasketServiceTest extends Specification{
     def "setStatusToOne() should throw NotAvailableGoodsException if orderDetails not available"(){
         given:
             def user = createUser()
-            def order = createOrder()
-            order.getOrderDetails()[0].setAvailable(false)
-            order.getOrderDetails()[0].setCount(6)
+            def order = createOrder(false, 6)
             def msg = "Order contains inaccessible item."
 
         when:
@@ -258,14 +255,12 @@ class GoodsBasketServiceTest extends Specification{
     def "removeFromBasket() should remove orderDetails"() {
         given:
             def user = createUser()
-            def orderDetails = createOrderDetails()
-            def order = createOrder()
-            orderDetails.setOrder(order)
+            def orderDetails = createOrderDetails(createOrder())
         when:
             goodsBasketService.removeFromBasket(orderDetails, user)
 
         then:
-            1 * orderRepository.findAllByUserAndStatus(user, { it == 0 }) >> [order]
+            1 * orderRepository.findAllByUserAndStatus(user, { it == 0 }) >> [orderDetails.getOrder()]
             1 * orderDetailsRepository.findById({it == orderDetails.getId()}) >> Optional.of(orderDetails)
             1 * orderDetailsRepository.delete({ it == orderDetails })
 
@@ -293,33 +288,4 @@ class GoodsBasketServiceTest extends Specification{
 
 
 
-    static Goods createGoods(){
-        return Goods.builder()
-                .id(1L)
-                .count(5)
-                .build()
-    }
-
-    static OrderDetails createOrderDetails(){
-        return OrderDetails.builder()
-                .id(1L)
-                .available(true)
-                .goods(createGoods())
-                .count(5)
-                .build()
-    }
-
-    static Order createOrder(){
-        Order.builder()
-                .id(1L)
-                .orderDetails([createOrderDetails()])
-                .status(0)
-                .build()
-    }
-
-    static User createUser(){
-        return User.builder()
-                .orders([createOrder(),createOrder()])
-                .build()
-    }
 }

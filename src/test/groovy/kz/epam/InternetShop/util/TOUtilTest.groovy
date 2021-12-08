@@ -1,71 +1,23 @@
 package kz.epam.InternetShop.util
 
-import kz.epam.InternetShop.model.Goods
 import kz.epam.InternetShop.model.GoodsCategory
-import kz.epam.InternetShop.model.Order
-import kz.epam.InternetShop.model.OrderDetails
 import kz.epam.InternetShop.model.TO.GoodsCategoryTO
 import kz.epam.InternetShop.model.TO.GoodsFiltersTO
-import kz.epam.InternetShop.model.TO.GoodsTO
-import kz.epam.InternetShop.model.TO.OrderDetailsTO
 import kz.epam.InternetShop.model.filter.AccessibleGoodsFilterImpl
 import kz.epam.InternetShop.model.filter.DescriptionLikeGoodsFilterImpl
 import kz.epam.InternetShop.model.filter.InRangeOfCostGoodsFilterImpl
 import kz.epam.InternetShop.model.filter.NameLikeGoodsFilterImpl
 import spock.lang.Specification
+import static kz.epam.InternetShop.ObjectCreator.*
 
 class TOUtilTest extends Specification{
 
-    Goods goods
-    GoodsTO goodsTO
-    Order order
-    OrderDetails orderDetails
-    OrderDetailsTO orderDetailsTO
-
-    def setup(){
-
-        goods = Goods.builder()
-                .id(1L)
-                .name("name")
-                .cost(1)
-                .count(1)
-                .description("description")
-                .photos(["photos"])
-                .build()
-
-        goodsTO = GoodsTO.builder()
-                .id(1L)
-                .name("name")
-                .cost(1)
-                .count(1)
-                .description("description")
-                .photos(["photos"])
-                .build()
-
-        order = Order.builder().id(1L).build()
-
-        orderDetails = OrderDetails.builder()
-                .id(1L)
-                .count(1)
-                .count(1)
-                .available(true)
-                .goods(goods)
-                .order(order)
-                .build()
-
-        orderDetailsTO = OrderDetailsTO.builder()
-                .id(1L)
-                .count(1)
-                .count(1)
-                .available(true)
-                .goodsId(1)
-                .goodsName("name")
-                .goodsPhoto("photo")
-                .orderId(1)
-                .build()
-    }
 
     def "asTo() should convert OrderDetails to OrderDetailsTo"(){
+        given:
+            def order = createOrder()
+            def goods = createGoods(5L,"goods")
+            def orderDetails = createOrderDetails(order, goods)
 
         when:
             def result = TOUtil.asTO(orderDetails)
@@ -77,52 +29,55 @@ class TOUtilTest extends Specification{
     }
 
     def "createFrom() should return orderDetails" (){
+        given:
+            def orderDetailsTO = createOrderDetailsTo()
+
         when:
             def result = TOUtil.createFrom(orderDetailsTO)
 
         then:
-            orderDetails == result
+            orderDetailsTO.getCount() == result.getCount()
 
     }
 
     def "createListFrom() should return orderDetails list"() {
         given:
-            def expected = [orderDetails]
+            def orderDetailsTO = createOrderDetailsTo()
 
         when:
             def result = TOUtil.createListFrom([orderDetailsTO])
 
         then:
-            expected == result
+            orderDetailsTO.getCount() == result[0].getCount()
     }
 
     def "asTo() should return GoodsTo"(){
+        given:
+            def goods = createGoods()
+
         when:
             def result = TOUtil.asTO(goods)
 
         then:
-            goodsTO == result
+            goods.getName() == result.getName()
 
     }
 
     def "createForm() should return goods"(){
+        given:
+            def goodsTO = createGoodsTo()
+
         when:
             def result = TOUtil.createFrom(goodsTO)
 
         then:
-            goods == result
+            goodsTO.getName() == result.getName()
     }
 
     def "asTo() should return GoodsCategoryTo"() {
         given:
-            GoodsCategory goodsCategory = GoodsCategory.builder()
-                    .id(1L)
-                    .name("name")
-                    .build()
-            GoodsCategoryTO goodsCategoryTO = GoodsCategoryTO.builder()
-                    .id(1L)
-                    .name("name")
-                    .build()
+            GoodsCategory goodsCategory = createGoodsCategory(1L, 'name')
+            GoodsCategoryTO goodsCategoryTO = createGoodsCategoryTO(1L, "name")
 
         when:
             def result = TOUtil.asTO(goodsCategory)

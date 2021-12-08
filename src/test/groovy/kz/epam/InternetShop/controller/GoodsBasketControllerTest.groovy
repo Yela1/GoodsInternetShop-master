@@ -1,11 +1,6 @@
 package kz.epam.InternetShop.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import kz.epam.InternetShop.model.Goods
-import kz.epam.InternetShop.model.Order
-import kz.epam.InternetShop.model.OrderDetails
-import kz.epam.InternetShop.model.TO.OrderDetailsTO
-import kz.epam.InternetShop.model.User
 import kz.epam.InternetShop.service.interfaces.GoodsBasketService
 import kz.epam.InternetShop.service.interfaces.UserService
 import org.springframework.http.MediaType
@@ -16,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup
+import static kz.epam.InternetShop.ObjectCreator.*
 
 class GoodsBasketControllerTest extends Specification{
     GoodsBasketService goodsBasketService = Mock()
@@ -26,8 +22,8 @@ class GoodsBasketControllerTest extends Specification{
 
     def "getBasketGoods() should return list of OrderDetails"(){
         given:
-            def user = User.builder().id(1L).build()
-            def expected =  new OrderDetails(1L, 1 ,2, new Order(), new Goods(), true)
+            def user = createUser()
+            def expected =  createOrderDetails()
             def json = new ObjectMapper().writeValueAsString([expected])
 
         when:
@@ -43,7 +39,7 @@ class GoodsBasketControllerTest extends Specification{
 
     def "clearBasket() should clear the basket"(){
         given:
-            def user = User.builder().id(1L).build()
+            def user = createUser()
 
         when:
             mockMvc.perform(get("/goods/basket/clear"))
@@ -56,7 +52,7 @@ class GoodsBasketControllerTest extends Specification{
 
     def "placeOrder() should change status of basket"() {
         given:
-            def user = User.builder().id(1L).build()
+            def user = createUser()
 
         when:
             mockMvc.perform(get("/goods/basket/order")).andExpect(status().isAccepted())
@@ -68,8 +64,8 @@ class GoodsBasketControllerTest extends Specification{
 
     def "createOrderDetailsInBasket() should create new OrderDetails"() {
         given:
-            def user = User.builder().id(1L).build()
-            def orderDetailsTO = new OrderDetailsTO(1L, 1L, "goods_name",15,15,"photo",1L,true)
+            def user = createUser()
+            def orderDetailsTO = createOrderDetailsTo()
             def requestJson = new ObjectMapper().writeValueAsString(orderDetailsTO)
 
         when:
@@ -99,8 +95,8 @@ class GoodsBasketControllerTest extends Specification{
 
     def "updateCountOrderDetailsInBasket() should update basket"(){
         given:
-            def user = User.builder().id(1L).build()
-            def orderDetailsTO = new OrderDetailsTO(1L, 1L, "goods_name",15,15,"photo",1L,true)
+            def user = createUser()
+            def orderDetailsTO = createOrderDetailsTo()
             def json = new ObjectMapper().writeValueAsString([orderDetailsTO])
 
         when:
@@ -130,7 +126,7 @@ class GoodsBasketControllerTest extends Specification{
     def "removeFromBasket() should delete orderDetails from basket"(){
         given:
             def id = 1L
-            def user = User.builder().id(1L).build()
+            def user = createUser()
 
         when:
             mockMvc.perform(delete("/goods/basket/{id}", id)).andExpect(status().isOk())

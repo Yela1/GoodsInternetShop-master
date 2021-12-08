@@ -1,11 +1,7 @@
 package kz.epam.InternetShop.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import kz.epam.InternetShop.model.User
-import kz.epam.InternetShop.payload.ApiResponse
 import kz.epam.InternetShop.payload.AuthResponse
-import kz.epam.InternetShop.payload.LoginRequest
-import kz.epam.InternetShop.payload.SignUpRequest
 import kz.epam.InternetShop.security.TokenProvider
 import kz.epam.InternetShop.service.interfaces.UserService
 import org.springframework.http.MediaType
@@ -19,6 +15,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup
+import static kz.epam.InternetShop.ObjectCreator.*
 
 class AuthControllerTest extends Specification{
     AuthenticationManager authenticationManager = Mock()
@@ -51,8 +48,7 @@ class AuthControllerTest extends Specification{
 
     def "authenticateUser() should return 400 if loginRequest is not valid"(){
         given:
-            def loginRequest = createLoginRequest()
-            loginRequest.setEmail("notValidEmail")
+            def loginRequest = createLoginRequest("notValidEmail","password")
             def requestJson = new ObjectMapper().writeValueAsString(loginRequest)
 
         expect:
@@ -67,8 +63,8 @@ class AuthControllerTest extends Specification{
         given:
             def signUpRequest = createSignUpRequest()
             def requestJson = new ObjectMapper().writeValueAsString(signUpRequest)
-            User user = Mock()
-            def apiResponse = new ApiResponse(true, "User registered successfully@")
+            def user = createUser()
+            def apiResponse = createApiResponse(true, "User registered successfully@")
             def expectedJson = new ObjectMapper().writeValueAsString(apiResponse)
 
         when:
@@ -87,8 +83,7 @@ class AuthControllerTest extends Specification{
 
     def "registerUser() should return 400 if signUpRequest is not valid"(){
         given:
-            def signUpRequest = createSignUpRequest()
-            signUpRequest.setEmail("NotValidEmail")
+            def signUpRequest = createSignUpRequest("notValidEmail")
             def requestJson = new ObjectMapper().writeValueAsString(signUpRequest)
 
         expect:
@@ -103,7 +98,7 @@ class AuthControllerTest extends Specification{
         given:
             def signUpRequest = createSignUpRequest()
             def json = new ObjectMapper().writeValueAsString(signUpRequest)
-            def user = User.builder().id(1L).username("username").build()
+            def user = createUser()
 
         when:
             mockMvc.perform(post("/auth/signup")
@@ -118,24 +113,4 @@ class AuthControllerTest extends Specification{
             thrown(NestedServletException)
 
     }
-
-
-    static LoginRequest createLoginRequest(){
-        LoginRequest loginRequest = new LoginRequest()
-        loginRequest.setEmail("email@gmail.com")
-        loginRequest.setPassword("password@gmail.com")
-        return loginRequest
-    }
-
-    static SignUpRequest createSignUpRequest(){
-        SignUpRequest sign = new SignUpRequest()
-        sign.setEmail("email@gmail.com")
-        sign.setPassword("password")
-        sign.setName("name")
-        sign.setAddress("address")
-        return sign
-    }
-
-
-
 }

@@ -8,6 +8,8 @@ import kz.epam.InternetShop.util.exception.NotFoundException
 import org.springframework.security.crypto.password.PasswordEncoder
 import spock.lang.Specification
 
+import static kz.epam.InternetShop.ObjectCreator.*
+
 class UserServiceTest extends Specification{
 
     UserRepository userRepository = Mock()
@@ -16,26 +18,6 @@ class UserServiceTest extends Specification{
 
     UserService userService = new UserServiceImpl(userRepository, passwordEncoder)
 
-
-    User user
-    User user1
-
-    def setup(){
-
-        user = User.builder().
-                username("yelaman")
-                .id(1L)
-                .password("Password123")
-                .address("Astana")
-                .build()
-
-        user1 = User.builder().
-                username("ayat")
-                .id(2L)
-                .password("Password123")
-                .address("Almaty")
-                .build()
-    }
 
 
 
@@ -49,14 +31,17 @@ class UserServiceTest extends Specification{
     }
 
     def "findById() should return user when its found"(){
+        given:
+            def user = createUser("Name", 1L,"Password", "Address")
+
         when:
             def result = userService.findById(1L)
 
         then:
-            1 * userRepository.findById(1L) >> Optional.of(user)
+            1 * userRepository.findById({ it == 1L }) >> Optional.of(user)
 
         and:
-            user.getUsername() == result.getUsername()
+            user == result
     }
 
     def "findById() should throw NotFoundException if not exist"(){
@@ -67,7 +52,7 @@ class UserServiceTest extends Specification{
             userService.findById(1L)
 
         then:
-            1 * userRepository.findById(1L) >> Optional.empty()
+            1 * userRepository.findById({ it == 1L  }) >> Optional.empty()
 
         and:
             def e = thrown(NotFoundException)
@@ -76,34 +61,50 @@ class UserServiceTest extends Specification{
     }
 
     def "save() should save user to db"(){
+        given:
+            def user = createUser("Name", 1L,"Password", "Address")
+            def expectedUser = createUser("Name", 1L,"PasswordEncoded", "Address")
+
         when:
-            userService.save(user)
+            def result = userService.save(user)
 
         then:
-            1 * passwordEncoder.encode({it == "Password123"}) >> "passwordEncoded"
-            1 * userRepository.save({ it.password == "passwordEncoded" }) >> user
+            1 * passwordEncoder.encode({it == user.getPassword()}) >> "PasswordEncoded"
+            1 * userRepository.save({ it.password == "PasswordEncoded" }) >> user
+
+        and:
+            expectedUser == result
 
     }
 
     def "delete() should delete user"(){
+        given:
+            def user = createUser("Name", 1L,"Password", "Address")
+
         when:
             userService.delete(user)
 
         then:
-            1 * userRepository.delete(user)
+            1 * userRepository.delete({ it.username == user.getUsername() })
 
     }
 
     def "findByUsernameLike() should return list of users"(){
+        given:
+            def user = createUser("Name", 1L,"Password", "Address")
+
         when:
-             userService.findByUsernameLike( "aman")
+             userService.findByUsernameLike( "ame")
 
         then:
-            1 * userRepository.findByUsernameLike( {it == "%aman%" }) >> [user]
+            1 * userRepository.findByUsernameLike( {it == "%ame%" }) >> [user]
 
     }
 
     def "findByAddressLike() should return list of users"(){
+        given:
+            def user = createUser("Name", 1L,"Password", "Kazakhstan")
+
         when:
            userService.findByAddressLike( "stan")
 
@@ -113,6 +114,9 @@ class UserServiceTest extends Specification{
     }
 
     def "findByFullNameLike() should return list of users"(){
+        given:
+            def user = createUser("Yelaman", 1L,"Password", "Kazakhstan")
+
         when:
            userService.findByFullNameLike("aman")
 
@@ -123,21 +127,23 @@ class UserServiceTest extends Specification{
 
     def "findAll() should return all users"(){
         given:
-            def list = [user,user1]
+            def userOne = createUser("First", 1L,"Password", "Kazakhstan")
+            def userTwo = createUser("Second", 1L,"Password", "Kazakhstan")
+            def expected = [userOne, userTwo]
 
         when:
             def result = userService.findAll()
 
         then:
-            1 * userRepository.findAll() >> list
+            1 * userRepository.findAll() >> expected
 
         and:
-            list == result
+            expected == result
     }
 
     def "deleteByUsername() should delete user"(){
         given:
-            def username = "yelaman"
+            def username = "username"
 
         when:
             userService.deleteByUsername(username)
@@ -149,7 +155,8 @@ class UserServiceTest extends Specification{
 
     def "findByUsername() should return user"(){
         given:
-            def username = "yelaman"
+            def username = "username"
+            def user = createUser("Username", 1L, "password","address")
 
         when:
             def result = userService.findByUsername(username)
@@ -160,6 +167,7 @@ class UserServiceTest extends Specification{
         and:
             Optional.of(user) == result
     }
+
 
 
 }

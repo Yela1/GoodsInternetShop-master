@@ -1,7 +1,6 @@
 package kz.epam.InternetShop.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import kz.epam.InternetShop.model.User
 import kz.epam.InternetShop.payload.UpdateRequest
 import kz.epam.InternetShop.service.interfaces.UserService
 import org.springframework.http.MediaType
@@ -13,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup
+import static kz.epam.InternetShop.ObjectCreator.*
 
 class UserControllerTest extends Specification{
     UserService userService = Mock()
@@ -26,10 +26,7 @@ class UserControllerTest extends Specification{
 
     def "getAllUsers() should return all users"(){
         given:
-            def user = User.builder()
-                    .id(1L)
-                    .username("yelaman")
-                    .build()
+            def user = createUser()
             def json = new ObjectMapper().writeValueAsString([user])
 
         when:
@@ -44,9 +41,7 @@ class UserControllerTest extends Specification{
 
     def "getUserById() should return specific user"(){
         given:
-            def user = User.builder()
-                    .id(1L)
-                    .build()
+            def user = createUser()
             def json = new ObjectMapper().writeValueAsString(user)
 
         when:
@@ -61,9 +56,7 @@ class UserControllerTest extends Specification{
 
     def "deleteUser() should delete user"(){
         given:
-            def user = User.builder()
-                    .id(1L)
-                    .build()
+            def user = createUser()
 
         when:
             mockMvc.perform(delete("/user/{id}", 1L))
@@ -77,11 +70,9 @@ class UserControllerTest extends Specification{
 
     def "updateUser() should update user"(){
         given:
-            UpdateRequest updateRequest = new UpdateRequest()
-            updateRequest.setAddress("address")
-            updateRequest.setFullName("fullName")
-            def user = User.builder().id(1L).username("ela").build()
-            def expectedUser = User.builder().id(1L).username("ela").address("address").fullName("fullName").build()
+            UpdateRequest updateRequest = createUpdateRequest("newAddress","newUsername")
+            def user = createUser("oldUsername", 1L,"password","oldAddress")
+            def expectedUser = createUser("newUsername", 1L,"password","newAddress")
             def json = new ObjectMapper().writeValueAsString(updateRequest)
             def expectedJson = new ObjectMapper().writeValueAsString(expectedUser)
 
@@ -95,13 +86,25 @@ class UserControllerTest extends Specification{
 
         then:
             1 * userService.findById(_) >> user
-            1 * userService.save(_) >> expectedUser
+            1 * userService.save({ it.fullName == expectedUser.getFullName() && it.address == expectedUser.getAddress() }) >> expectedUser
 
+    }
+
+    def "updateUser() should return 400 if loginRequest is not valid"() {
+        given:
+            def request = "notValidRequest"
+            def requestJson = new ObjectMapper().writeValueAsString(request)
+
+        expect:
+            mockMvc.perform(put("/user/update")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(requestJson))
+                    .andExpect(status().isBadRequest())
     }
 
     def "getCurrentUser() should return user"(){
         given:
-            def user = new User()
+            def user = createUser()
             def expectedJson =  new ObjectMapper().writeValueAsString(user)
 
         when:

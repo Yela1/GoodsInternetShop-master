@@ -3,11 +3,12 @@ package kz.epam.InternetShop.security
 import io.jsonwebtoken.Jwts
 import kz.epam.InternetShop.configuration.AppProperties
 import kz.epam.InternetShop.model.Role
-import kz.epam.InternetShop.model.User
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.userdetails.UserDetails
 import spock.lang.Specification
+
+import static kz.epam.InternetShop.ObjectCreator.*
 
 
 import javax.servlet.http.HttpServletRequest
@@ -48,8 +49,8 @@ class TokenProviderTest extends Specification{
 
     def "createToken() from user should return token"(){
         given:
-            def user = User.builder().id(1L).build()
             def expectedId = 1L
+            def user = createUser(expectedId)
 
         when:
             def result =tokenProvider.createToken(user)
@@ -69,7 +70,7 @@ class TokenProviderTest extends Specification{
     def "getUserIdFromToken() should return id from token"(){
         given:
             def token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxNSIsImlhdCI6MTYzODg5MDczNywiZXhwIjoxNjcwNDQ3Njg5fQ.GoUfmZv6Wxl2TJDWNnmF6ZB72wMOrm7kl1kuL8E7mFV_9QFCCQy3FkrIUdkyuh41cRZtDUPQ-7bjY1-LxXejMQ"
-            def user = User.builder().id(15L).build()
+            def user = createUser(15L)
             def expectedId = user.getId()
 
         when:
@@ -87,7 +88,7 @@ class TokenProviderTest extends Specification{
     def "getAuthenticationByUserFromDbWithId() should return UsernamePasswordAuthenticationToken"(){
         given:
             def token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxNSIsImlhdCI6MTYzODg5MDczNywiZXhwIjoxNjcwNDQ3Njg5fQ.GoUfmZv6Wxl2TJDWNnmF6ZB72wMOrm7kl1kuL8E7mFV_9QFCCQy3FkrIUdkyuh41cRZtDUPQ-7bjY1-LxXejMQ"
-            def user = User.builder().id(15L).authority(Collections.singleton(Role.ROLE_USER)).build()
+            def user = createUser(1L, Collections.singleton(Role.ROLE_USER))
             UserDetails userDetails = Mock(){
                 getAuthorities() >> user.getAuthority()
             }

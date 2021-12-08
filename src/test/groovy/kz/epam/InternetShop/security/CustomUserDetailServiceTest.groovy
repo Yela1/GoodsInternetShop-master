@@ -1,11 +1,12 @@
 package kz.epam.InternetShop.security
 
-import kz.epam.InternetShop.model.Role
-import kz.epam.InternetShop.model.User
 import kz.epam.InternetShop.repository.UserRepository
 import kz.epam.InternetShop.util.exception.NotFoundException
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import spock.lang.Specification
+
+
+import static kz.epam.InternetShop.ObjectCreator.*
 
 class CustomUserDetailServiceTest extends Specification{
 
@@ -18,20 +19,14 @@ class CustomUserDetailServiceTest extends Specification{
 
     def "loadUserByUsername() should return UserDetails"(){
         given:
-            def user = User.builder()
-                    .id(1L)
-                    .username("user")
-                    .password("pass")
-                    .fullName("name")
-                    .address("address")
-                    .enabled(1)
-                    .authority(Collections.singleton(Role.ROLE_USER)).build()
+            def enabled = 1
+            def user = createUser(enabled)
 
         when:
-            def result = customUserDetailsService.loadUserByUsername(_ as String)
+            def result = customUserDetailsService.loadUserByUsername("username")
 
         then:
-            1 * userRepository.findByUsername(_) >> Optional.of(user)
+            1 * userRepository.findByUsername({it == "username"}) >> Optional.of(user)
 
         and:
             user.getUsername() == result.getUsername()
@@ -42,10 +37,10 @@ class CustomUserDetailServiceTest extends Specification{
             def msg = "Username not found"
 
         when:
-            customUserDetailsService.loadUserByUsername(_ as String)
+            customUserDetailsService.loadUserByUsername("username")
 
         then:
-            1 * userRepository.findByUsername(_) >> Optional.empty()
+            1 * userRepository.findByUsername("username") >> Optional.empty()
 
         and:
             def e = thrown(UsernameNotFoundException)
@@ -54,20 +49,14 @@ class CustomUserDetailServiceTest extends Specification{
 
     def "loadUserById should return UserDetails"(){
         given:
-            def user = User.builder()
-                    .id(1L)
-                    .username("user")
-                    .password("pass")
-                    .fullName("name")
-                    .address("address")
-                    .enabled(1)
-                    .authority(Collections.singleton(Role.ROLE_USER)).build()
+            def enabled = 1
+            def user = createUser(enabled)
 
         when:
             def result = customUserDetailsService.loadUserById(1L)
 
         then:
-            1 * userRepository.findById(1L) >> Optional.of(user)
+            1 * userRepository.findById({ it == 1L }) >> Optional.of(user)
 
         and:
             user.getUsername() == result.getUsername()
@@ -81,7 +70,7 @@ class CustomUserDetailServiceTest extends Specification{
             customUserDetailsService.loadUserById(1L)
 
         then:
-            1 * userRepository.findById(1L) >> Optional.empty()
+            1 * userRepository.findById({ it == 1L }) >> Optional.empty()
 
         and:
             def e = thrown(NotFoundException)

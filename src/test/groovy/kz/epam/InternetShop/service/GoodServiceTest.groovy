@@ -11,6 +11,7 @@ import kz.epam.InternetShop.util.exception.NotFoundException
 import spock.lang.Specification
 
 
+import static kz.epam.InternetShop.ObjectCreator.*
 
 class GoodServiceTest extends Specification{
 
@@ -18,27 +19,14 @@ class GoodServiceTest extends Specification{
 
     GoodsService goodsService = new GoodsServiceImpl(goodsRepository)
 
-    Goods goods
-    Goods goods1
-    GoodsFilter goodsFilter
-
-
-    def setup() {
-        goods = Goods.builder()
-                .id(1L)
-                .name("Good_one")
-                .build()
-        goods1 = Goods.builder()
-                .id(2L)
-                .name("Good_two")
-                .build()
-
-        goodsFilter = new NameLikeGoodsFilterImpl(true, "two")
-    }
 
     def "findAll() should return all goods"(){
         given:
-            def list = [goods, goods1]
+            def goodsOne = createGoods(1L, "first")
+            def goodsTwo = createGoods(2L, "second")
+            def goodsFilter = createGoodsFilter(true, "rst")
+            def list = [goodsOne, goodsTwo]
+            def expected = [goodsOne]
 
         when:
             def result = goodsService.findAll([goodsFilter])
@@ -47,33 +35,38 @@ class GoodServiceTest extends Specification{
             1 * goodsRepository.findAll() >> list
 
         and:
-            list != result
-            list[1] == result[0]
+            expected == result
     }
 
     def "findAllByGoodsCategory() should return all goods by category"(){
         given:
-            def list = [goods, goods1]
-            def goodsCategory = GoodsCategory.builder().name("Category").build()
+            def goodsOne = createGoods(1L, "Mercedes")
+            def goodsTwo = createGoods(2L, "BMW")
+            def goodsFilter = createGoodsFilter(true, "cedes")
+            def goodsCategory = createGoodsCategory("cars")
+            def expected = [goodsOne]
 
         when:
-            def result = goodsService.findAllByGoodsCategory(goodsCategory, [])
+            def result = goodsService.findAllByGoodsCategory(goodsCategory, [goodsFilter])
 
         then:
-            1 * goodsRepository.findAllByGoodsCategory(goodsCategory) >> list
+            1 * goodsRepository.findAllByGoodsCategory(goodsCategory) >> [goodsOne, goodsTwo]
 
         and:
-            list == result
+            expected == result
 
     }
 
     def "save() should save goods to db"(){
+        given:
+            def goods = createGoods(1L, "GOODS")
+
         when:
             def result = goodsService.save(goods)
 
         then:
-            1 * goodsRepository.existsById(1L) >> true
-            1 * goodsRepository.save(goods) >> goods
+            1 * goodsRepository.existsById({ it == goods.getId() }) >> true
+            1 * goodsRepository.save({ it.id == goods.getId() && it.name == goods.getName() }) >> goods
 
         and:
             goods == result
@@ -81,57 +74,80 @@ class GoodServiceTest extends Specification{
     }
 
     def "save() should throw notFoundException when goods does not exist"(){
+        given:
+            def goods = createGoods(1L, "GOODS")
+            def msg = "Item not found"
+
         when:
             goodsService.save(goods)
 
         then:
-            1 * goodsRepository.existsById(1L) >> false
+            1 * goodsRepository.existsById({it == goods.getId() }) >> false
 
         and:
-            thrown(NotFoundException)
+            def er = thrown(NotFoundException)
+            msg == er.getMessage()
     }
 
     def "delete() should delete goods if found"(){
+        given:
+            def goods = createGoods(1L, "GOODS")
+
         when:
             goodsService.delete(goods)
 
         then:
-            1 * goodsRepository.existsById(1L) >> true
-            1 * goodsRepository.delete(goods)
+            1 * goodsRepository.existsById({ it == goods.getId() }) >> true
+            1 * goodsRepository.delete({ it.id == goods.getId() && it.name == goods.getName() })
     }
 
     def "delete() should throw NotFoundException if goods does not exist"(){
+        given:
+            def goods = createGoods(1L, "GOODS")
+            def msg = "Item not found"
+
         when:
             goodsService.delete(goods)
 
         then:
-            1 * goodsRepository.existsById(1L) >> false
+            1 * goodsRepository.existsById({it == goods.getId()}) >> false
 
         and:
-            thrown(NotFoundException)
+            def er = thrown(NotFoundException)
+            msg == er.getMessage()
 
     }
 
     def "get() should return goods if exist"(){
+        given:
+            def goods = createGoods(1L, "GOODS")
+
         when:
             def result = goodsService.get(1L)
 
         then:
-            1 * goodsRepository.findById(1L) >> Optional.of(goods)
+            1 * goodsRepository.findById({ it == 1L }) >> Optional.of(goods)
 
         and:
             goods == result
     }
 
     def "get() should throw NotFoundException if goods does not exist"(){
+        given:
+            def msg = "Item not found"
+
         when:
             goodsService.get(1L)
 
         then:
-            1 * goodsRepository.findById(1L) >> Optional.empty()
+            1 * goodsRepository.findById({ it == 1L }) >> Optional.empty()
 
         and:
-            thrown(NotFoundException)
+            def er = thrown(NotFoundException)
+            msg == er.getMessage()
     }
+
+
+
 
 }

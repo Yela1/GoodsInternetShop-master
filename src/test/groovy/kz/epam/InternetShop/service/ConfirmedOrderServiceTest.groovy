@@ -1,13 +1,13 @@
 package kz.epam.InternetShop.service
 
-import kz.epam.InternetShop.model.Order
-import kz.epam.InternetShop.model.OrderDetails
-import kz.epam.InternetShop.model.User
 import kz.epam.InternetShop.repository.OrderDetailsRepository
 import kz.epam.InternetShop.repository.OrderRepository
 import kz.epam.InternetShop.service.impl.ConfirmedOrderServiceImpl
 import kz.epam.InternetShop.service.interfaces.ConfirmedOrderService
 import spock.lang.Specification
+
+
+import static kz.epam.InternetShop.ObjectCreator.*
 
 class ConfirmedOrderServiceTest extends Specification{
 
@@ -18,42 +18,36 @@ class ConfirmedOrderServiceTest extends Specification{
 
 
     def "getAllOrders() should return all orders for specific user"() {
-
         given:
-            Order order = Order.builder()
-                .id(1L)
-                .build()
-
-            def list = [order]
+            def order = createOrder(true, 5)
+            def user = createUser(1L)
+            def expectedList = [order]
 
         when:
-            def result = confirmedOrderService.getAllOrders(new User())
+            def result = confirmedOrderService.getAllOrders(user)
 
         then:
-            1 * orderRepository.findAllByUserAndStatus(new User(), 1) >> list
+            1 * orderRepository.findAllByUserAndStatus({it.id == user.getId()}, {it == 1}) >> expectedList
 
         and:
-            list == result
+            expectedList == result
     }
 
     def "getAllOrderDetails() should return details for specific order"() {
 
         given:
-            OrderDetails orderDetails = OrderDetails.builder()
-                    .id(1L)
-                    .build()
-
-            def list = [orderDetails]
+            def orderDetails = createOrderDetails()
+            def expectedList = [orderDetails]
+            def order = createOrder(true, 5)
 
 
         when:
-            def result = confirmedOrderService.getAllOrderDetails(new Order())
+            def result = confirmedOrderService.getAllOrderDetails(order)
 
         then:
-            1 *  orderDetailsRepository.findByOrder(new Order()) >> list
+            1 *  orderDetailsRepository.findByOrder({it.status == order.getStatus()}) >> expectedList
 
         and:
-            list == result
+            expectedList == result
     }
-
 }
